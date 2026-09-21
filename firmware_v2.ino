@@ -154,7 +154,7 @@ void executarSessaoLeitura() {
         Serial.println(" cm");
 
         Serial.print("Estado do sistema: ");
-        Serial.println(estadoAtual == NORMAL ? "NORMAL (LED Verde)" : "ALERTA (LED Vermelho)");
+        Serial.println(estadoAtual == NORMAL ? "NORMAL" : "ALERTA");
 
         cicloSessaoCount++;
         emSessao = false;
