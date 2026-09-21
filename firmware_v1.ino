@@ -92,37 +92,42 @@ void executarSessaoLeitura() {
 
 void realizarDownloadEUpdate(String urlBinary) {
   HTTPClient http;
+  
+  // Permite seguir redirecionamentos do GitHub automaticamente
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.begin(urlBinary);
+
   int httpCode = http.GET();
 
   if (httpCode == HTTP_CODE_OK) {
     int contentLength = http.getSize();
-    bool canBegin = Update.begin(contentLength);
+    Serial.printf("[OTA] Tamanho informado pelo servidor: %d bytes\n", contentLength);
 
-    if (canBegin) {
+    // Se o tamanho for valido (>0), usa ele; senao, usa UPDATE_SIZE_UNKNOWN
+    size_t updateSize = (contentLength > 0) ? (size_t)contentLength : UPDATE_SIZE_UNKNOWN;
+
+    if (Update.begin(updateSize)) {
       Serial.println("[OTA] Gravando nova versão no ESP32...");
       WiFiClient* stream = http.getStreamPtr();
       size_t written = Update.writeStream(*stream);
 
-      if (written == contentLength) {
-        Serial.println("[OTA] Gravação concluída com sucesso!");
-      } else {
-        Serial.printf("[OTA] Gravação incompleta: %d/%d bytes\n", written, contentLength);
-      }
+      Serial.printf("[OTA] Total de bytes gravados: %d\n", written);
 
       if (Update.end()) {
         if (Update.isFinished()) {
-          Serial.println("[OTA] Atualização com sucesso! Reiniciando...");
+          Serial.println("[OTA] Atualização concluída com sucesso! Reiniciando...");
           ESP.restart();
+        } else {
+          Serial.println("[OTA] Erro: Atualização não foi finalizada.");
         }
       } else {
-        Serial.printf("[OTA] Erro no Update: %s\n", Update.errorString());
+        Serial.printf("[OTA] Erro ao finalizar Update: %s\n", Update.errorString());
       }
     } else {
-      Serial.println("[OTA] Espaço insuficiente para atualização.");
+      Serial.printf("[OTA] Falha ao iniciar Update: %s\n", Update.errorString());
     }
   } else {
-    Serial.printf("[OTA] Falha ao baixar .bin. HTTP: %d\n", httpCode);
+    Serial.printf("[OTA] Falha ao baixar .bin. Codigo HTTP: %d\n", httpCode);
   }
   http.end();
 }
